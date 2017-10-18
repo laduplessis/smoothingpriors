@@ -1,4 +1,4 @@
-package beast.evolution.speciation;
+package beast.math.distributions;
 
 import beast.core.Distribution;
 import beast.core.Function;
