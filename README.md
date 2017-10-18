@@ -35,4 +35,8 @@ BEAST1.8 and BEAST2 implement the Markov chain distribution smoothing prior in `
 
 ## Why slice trees?
 
-Why not?
+TreeSlicer can be used to create a time vector for a skyline based on events in a tree, or calendar dates, without having to know _a priori_ what the date of most recent/oldest sample or tMRCA of the tree is. This can be very useful for specifying skylines without having to laboriously write down the times of events.
+
+TreeSlicer always returns times from the most recent sample in a tree. Thus, time in the present is always 0.
+
+More detailed help will be added later.
