@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?><beast namespace="beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood:beast.evolution.speciation:beast.core.parameter:beast.math.distributions" version="2.0">
 
-	<!-- HCV analysis from the Birth-death skyline PNAS paper, modified to include an Ornstein-Uhlenbeck prior on changes in reproductiveNumber through time -->
+	<!-- 
+          HCV analysis from the Birth-death skyline PNAS paper, modified to include an Ornstein-Uhlenbeck prior on changes in reproductiveNumber and becomeUninfectiousRate through time (40 intervals between origin and present) 
+     -->
 
     <data dataType="nucleotide" id="alignment" name="alignment" strip="false">
                     <sequence id="seq_AF271887i_3405" taxon="AF271887i_3405" totalcount="4" value="CTCTTGGCACTTCTCTCGTGCCTGACCGTCCCTGCCTCGGCCATACACTATCGCAATGCTTCGGATGTCTACCACGTCACCAATGACTGTCCGAATTCCAGCATAGTCTATGAGTCTGAAAACCACATCCTACACCTTCCGGGGTGTGTGCCCTGTGTGAGGATTGGGAACGTGTCACAATGCTGGGTGGCCCTAACCCCCACCGTGGCGGCGCCGTACCTCAATGCTCCGGTCGACTCCCTACGGAGGCACGTGGACCTGATGGTTGGCGCCGCTACTATGTGCTCAGCATTTTATGTTGGGGACCTGTGCGGGGCTGTGTTCCTGGCGGGCCAGTTGGTGACGTTTCGACCGCGACGCCACTGGACCACTCAAGATTGTAACTGTTCCATCTATGCCGGGCACATCACA"/>
@@ -68,7 +70,7 @@
                     <sequence id="seq_AF271825i_0800" taxon="AF271825i_0800" totalcount="4" value="CTCTTGGCACTTCTTTCGTGCTTGACTGTCCCCGCTTCGGCCATCAACTACCGCAATGCTTCGGGCGTCTACCACGTCACCAACGACTGCCCGAATTCAAGCATAGTGTTTGAGGCCGACCATCACATCTTACACCTTCCAGGTTGCGTGCCCTGCGTGAGAGAGGGGAATCAGTCTCGTTGCTGGGTGGCTCTTACTCCTACTGTCGCAGCGCCACACATCGGCGCGCCGCTTGAATCCTTGCGGAGTCATGTGGATCTGATGGTGGGGGCTGCCACTGCTTGTTCGGCCCTTTACATCGGGGACTTGTGTGGCGGCTTGTTCTTGGTCGGTCAGATGTTCTCTTTCCGACCACGACGCCACTGGACTACCCAGGACTGCAATTGTTCTATCTATACAGGGCACATCACT"/>
                 </data>
 
-    <tree spec='beast.util.ClusterTree' id='tree' clusterType='upgma' taxa='@alignment' clock.rate='0.79e-3'/>
+     <tree spec='beast.util.ClusterTree' id='tree' clusterType='upgma' taxa='@alignment' clock.rate='0.79e-3'/>
 
 	<BirthDeathSkylineModel spec="BirthDeathSkylineModel" id="birthDeath" tree="@tree" contemp="true" birthRateTimesRelative="true" deathRateTimesRelative="true">
 		<parameter name="intervalTimes" id="intervalTimes" value="0 0.025 0.05 0.075 0.1 0.125 0.15 0.175 0.2 0.225 0.25 0.275 0.3 0.325 0.35 0.375 0.4 0.425 0.45 0.475 0.5 0.525 0.55 0.575 0.6 0.625 0.65 0.675 0.7 0.725 0.75 0.775 0.8 0.825 0.85 0.875 0.9 0.925 0.95 0.975"/>
@@ -97,9 +99,11 @@
    
     <distribution id="posterior" spec="util.CompoundDistribution">
 		<distribution id="prior" spec="util.CompoundDistribution">
+
 			<distribution id="BDlikelihood" spec="util.CompoundDistribution">
 				<distribution idref="birthDeath"/>		
 			</distribution>
+
 			<distribution  id='orig_root_Prior' x="@orig_root" spec='beast.math.distributions.Prior'>
 				<distr spec='beast.math.distributions.LogNormalDistributionModel' M="5." S=".5" offset="0.0" meanInRealSpace="false"/>
 			</distribution>
@@ -107,58 +111,50 @@
 				<distr spec="beast.math.distributions.Beta" alpha="1." beta="9999." offset="0."/> 
 			</distribution>
 
-
-               <!--reproductiveNumber Prior-->
+               <!-- reproductiveNumber Prior-->
      		<distribution id="reproductiveNumber_prior" spec="OUPrior" x="@reproductiveNumber" times="@intervalTimes">
-     			<parameter spec='RealParameter' name='mean' id='mu.reproductiveNumber_prior' dimension="1" value="1"/>
-     			<parameter spec='RealParameter' name='sigma' id='sigma.reproductiveNumber_prior' dimension="1" value="1"/>
-     			<parameter spec='RealParameter' name='nu' id='nu.reproductiveNumber_prior' dimension="1" value="0.1"/>
+     			<parameter spec='RealParameter' name='mean' id='reproductiveNumber.mu' dimension="1" value="1"/>
+     			<parameter spec='RealParameter' name='sigma' id='reproductiveNumber.sigma' dimension="1" value="1"/>
+     			<parameter spec='RealParameter' name='nu' id='reproductiveNumber.nu' dimension="1" value="0.1"/>
      			<distribution spec='beast.math.distributions.LogNormalDistributionModel' name="x0Prior" M="0.5" S="1" meanInRealSpace="false"/>
      		</distribution>
 
-               <distribution id="reproductiveNumber_mu" spec="beast.math.distributions.Prior" x="@mu.reproductiveNumber_prior">
-                    <!--distr id="sigma_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <!-- reproductiveNumber Hyperpriors -->
+               <distribution id="reproductiveNumber.mu_prior" spec="beast.math.distributions.Prior" x="@reproductiveNumber.mu">
                     <distr spec="beast.math.distributions.LogNormalDistributionModel" M="0.5" S="1.0" offset="0.0" meanInRealSpace="false"/>
                </distribution>
-               <distribution id="reproductiveNumber_sigma" spec="beast.math.distributions.Prior" x="@sigma.reproductiveNumber_prior">
-                    <!--distr id="sigma_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <distribution id="reproductiveNumber.sigma_prior" spec="beast.math.distributions.Prior" x="@reproductiveNumber.sigma">
                     <distr spec="beast.math.distributions.LogNormalDistributionModel" M="0" S="0.5" offset="0.0" meanInRealSpace="false"/>
                </distribution>
-               <distribution id="reproductiveNumber_nu" spec="beast.math.distributions.Prior" x="@nu.reproductiveNumber_prior">
-                    <!--distr id="nu_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <distribution id="reproductiveNumber.nu_prior" spec="beast.math.distributions.Prior" x="@reproductiveNumber.nu">
                     <distr spec="beast.math.distributions.LogNormalDistributionModel" M="0" S="0.5" offset="0.0" meanInRealSpace="false"/>
                </distribution>
 
-               <!--delta Prior-->
-               <distribution id="delta_prior" spec="OUPrior" x="@becomeUninfectiousRate" times="@intervalTimes">
-                    <parameter spec='RealParameter' name='mean' id='mu.delta_prior' dimension="1" value="0.1"/>
-                    <parameter spec='RealParameter' name='sigma' id='sigma.delta_prior' dimension="1" value="1"/>
-                    <parameter spec='RealParameter' name='nu' id='nu.delta_prior' dimension="1" value="0.1"/>
+               <!--becomeUninfectiousRate Prior-->
+               <distribution id="becomeUninfectiousRate_prior" spec="OUPrior" x="@becomeUninfectiousRate" times="@intervalTimes">
+                    <parameter spec='RealParameter' name='mean' id='becomeUninfectiousRate.mu' dimension="1" value="0.1"/>
+                    <parameter spec='RealParameter' name='sigma' id='becomeUninfectiousRate.sigma' dimension="1" value="1"/>
+                    <parameter spec='RealParameter' name='nu' id='becomeUninfectiousRate.nu' dimension="1" value="0.1"/>
                     <distribution spec='beast.math.distributions.Beta' name="x0Prior" alpha="5." beta="5." offset="0."/>
                </distribution>
 
-
-               <distribution spec="beast.math.distributions.Prior" id="delta_mu" x="@mu.delta_prior">
-                    <!--distr id="sigma_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <!-- becomeUninfectiousRate Hyperpriors -->
+               <distribution spec="beast.math.distributions.Prior" id="becomeUninfectiousRate.mu_prior" x="@becomeUninfectiousRate.mu">
                     <distr spec="beast.math.distributions.Beta" alpha="5." beta="5." offset="0."/>
                </distribution>
-               <distribution spec="beast.math.distributions.Prior" id="delta_sigma" x="@sigma.delta_prior">
-                    <!--distr id="sigma_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <distribution spec="beast.math.distributions.Prior" id="becomeUninfectiousRate.sigma_prior" x="@becomeUninfectiousRate.sigma">
                     <distr spec="beast.math.distributions.LogNormalDistributionModel" M="0" S="0.5" offset="0.0" meanInRealSpace="false"/>
                </distribution>
-               <distribution spec="beast.math.distributions.Prior" id="delta_nu" x="@nu.delta_prior">
-                    <!--distr id="nu_prior" spec='beast.math.distributions.LogNormalDistributionModel' M="-1." S="1." offset="0.0" meanInRealSpace="false"/-->
+               <distribution spec="beast.math.distributions.Prior" id="becomeUninfectiousRate.nu_prior" x="@becomeUninfectiousRate.nu">
                     <distr spec="beast.math.distributions.LogNormalDistributionModel" M="0" S="0.5" offset="0.0" meanInRealSpace="false"/>
                </distribution>
-
 
           </distribution>
 
-
 		<distribution id="likelihood" spec="util.CompoundDistribution">
 			<distribution data="@alignment" id="treeLikelihood" spec="TreeLikelihood" tree="@tree" siteModel="@SiteModel" branchRateModel="@StrictClock"/>           
-        </distribution>    	
-    </distribution>
+          </distribution>    	
+     </distribution>
 
 	
 	<RPNcalculator spec="beast.math.statistic.RPNcalculator" id="birth" expression="reproductiveNumber becomeUninfectiousRate *"> <!-- s/(d+s) -->
@@ -184,13 +180,13 @@
 			<stateNode idref='rho'/>
 			<stateNode idref='reproductiveNumber'/>
 
-               <stateNode idref='mu.reproductiveNumber_prior'/>
-			<stateNode idref='sigma.reproductiveNumber_prior'/>
-			<stateNode idref='nu.reproductiveNumber_prior'/>
+               <stateNode idref='reproductiveNumber.mu'/>
+			<stateNode idref='reproductiveNumber.sigma'/>
+			<stateNode idref='reproductiveNumber.nu'/>
 
-               <stateNode idref='mu.delta_prior'/>
-               <stateNode idref='sigma.delta_prior'/>
-               <stateNode idref='nu.delta_prior'/>
+               <stateNode idref='becomeUninfectiousRate.mu'/>
+               <stateNode idref='becomeUninfectiousRate.sigma'/>
+               <stateNode idref='becomeUninfectiousRate.nu'/>
 
 			<stateNode idref="freqParameter"/>
 			<stateNode idref="gammaShape"/>
@@ -206,13 +202,13 @@
 		<operator id='rho_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@rho"/>
 		<operator id='reproductiveNumber_scaler' spec='ScaleOperator' scaleFactor=".75" weight="40" parameter="@reproductiveNumber"/>
 
-          <operator id='reproductiveNumber_mu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@mu.reproductiveNumber_prior"/>
-		<operator id='reproductiveNumber_sigma_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@sigma.reproductiveNumber_prior"/>
-		<operator id='reproductiveNumber_nu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@nu.reproductiveNumber_prior"/>
+          <operator id='reproductiveNumber.mu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@reproductiveNumber.mu"/>
+		<operator id='reproductiveNumber.sigma_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@reproductiveNumber.sigma"/>
+		<operator id='reproductiveNumber.nu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@reproductiveNumber.nu"/>
 
-          <operator id='delta_mu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@mu.delta_prior"/>
-          <operator id='delta_sigma_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@sigma.delta_prior"/>
-          <operator id='delta_nu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@nu.delta_prior"/>
+          <operator id='becomeUninfectiousRate.mu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@becomeUninfectiousRate.mu" />
+          <operator id='becomeUninfectiousRate.sigma_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@becomeUninfectiousRate.sigma"/>
+          <operator id='becomeUninfectiousRate.nu_scaler' spec='ScaleOperator' scaleFactor=".75" weight="1" parameter="@becomeUninfectiousRate.nu"/>
 
 		<operator id="updown" spec="UpDownOperator" scaleFactor=".75" weight="20">
 			<up idref="reproductiveNumber"/>
@@ -238,7 +234,7 @@
 		<operator id='gammaShapeScaler' spec='ScaleOperator' scaleFactor=".75" weight=".2" parameter="@gammaShape"/>
 		<operator autoOptimize="true" delta="0.2" id="FrequenciesExchanger" integer="false" spec="DeltaExchangeOperator" weight="0.1" parameter="@freqParameter"/>
 
-		<logger fileName="HCV.BDSKY.OUPrior.Optim.R40_D40_$(seed).log" id="tiplog" logEvery="20000" mode="autodetect" model="@posterior">
+		<logger fileName="hcv_bdsky_ouprior_$(seed).log" id="tiplog" logEvery="20000" mode="autodetect" model="@posterior">
 			<distribution idref="posterior" name="log"/>
 			<log idref="BDlikelihood"/>
 			<log idref="likelihood"/>
@@ -256,13 +252,13 @@
 			<log idref="rateGT"/>
 			<log idref="proportionInvariant"/>
 
-               <log idref='mu.reproductiveNumber_prior'/>
-			<log idref='sigma.reproductiveNumber_prior'/>
-			<log idref='nu.reproductiveNumber_prior'/>
+               <log idref='reproductiveNumber.mu'/>
+			<log idref='reproductiveNumber.sigma'/>
+			<log idref='reproductiveNumber.nu'/>
 
-               <log idref='mu.delta_prior'/>
-               <log idref='sigma.delta_prior'/>
-               <log idref='nu.delta_prior'/>
+               <log idref='becomeUninfectiousRate.mu'/>
+               <log idref='becomeUninfectiousRate.sigma'/>
+               <log idref='becomeUninfectiousRate.nu'/>
 
 			<log idref='reproductiveNumber'/>
 			<log idref="becomeUninfectiousRate"/>
@@ -277,17 +273,9 @@
 			<log idref="BDlikelihood"/>
 			<log idref="likelihood"/>
 			<log idref="TreeHeight"/>
-			<log idref="orig_root"/>
-			<log idref='rho'/>
-
-			<log idref='reproductiveNumber'/>
-			<log idref="becomeUninfectiousRate"/>
-			<log idref="birth"/>
-			<log idref="death"/>
-			<log idref="sampling"/>
 		</logger>
 		
-		<logger fileName="HCV.BDSKY.OUPrior.Optim.R40_D40_$(seed).trees" id="treelog" logEvery="50000" mode="tree">
+		<logger fileName="hcv_bdsky_ouprior_$(seed).trees" id="treelog" logEvery="50000" mode="tree">
 			<log spec='beast.evolution.tree.TreeWithMetaDataLogger' tree='@tree'>
 				<metadata idref="posterior"/>
 			</log>
