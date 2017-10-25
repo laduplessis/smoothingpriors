@@ -78,8 +78,8 @@
 <parameter id="ReChangeTimes" name="ReChangeTimes">0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9</parameter> 
 <reverseTimeArrays id="reverseTimeArrays" spec="parameter.BooleanParameter" dimension="6">true true true false false true</reverseTimeArrays>
 
-<function spec="Slice" id="ReDeme0" arg="@R0" index="0" count="5"/>
-<function spec="Slice" id="ReDeme1" arg="@R0" index="5" count="5"/>
+<function spec="Slice" id="ReDeme0" arg="@R0" index="0" count="10"/>
+<function spec="Slice" id="ReDeme1" arg="@R0" index="10" count="10"/>
  
 
 <run id="mcmc" spec="MCMC" chainLength="10000000" numInitializationAttempts="100">
@@ -155,7 +155,8 @@
                             frequencies="@geo-frequencies" 
                             reverseTimeArrays="@reverseTimeArrays"
                             birthRateChangeTimes="@ReChangeTimes"
-                            birthRateAmongDemesTimesRelative="True"/>
+                            birthRateAmongDemesTimesRelative="True"
+                            birthRateTimesRelative="True"/>
 
                   <!-- R0 priors -->
                   <!--prior id="RPrior" name="distribution" x="@R0">
@@ -343,7 +344,7 @@
           <log idref="prior"/>
       </logger>
 
-      <logger id="treelog" fileName="$(tree).trees" logEvery="1000" mode="tree">
+      <logger id="treelog" fileName="dengue_bdmm_ouprior.trees" logEvery="1000" mode="tree">
           <log id="TreeWithMetaDataLogger" spec="beast.evolution.tree.TreeWithMetaDataLogger" tree="@Tree"/>
       </logger>
 
