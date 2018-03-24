@@ -50,8 +50,8 @@
 
     
 <!-- Treeslicer -->
-<parameter spec="TreeSlicer" id="ReTreeSlice" tree="@Tree" dimension="10" value="1" stop="tmrca" includeLast="False"/>
-<parameter spec="TreeSlicer" id="samplingTreeSlice" tree="@Tree" dimension="2" value="1" stop="oldestsample" includeLast="true"/>
+<parameter spec="TreeSlicerConcrete" id="ReTreeSlice" tree="@Tree" dimension="10" value="1" stop="tmrca" includeLast="False"/>
+<parameter spec="TreeSlicerConcrete" id="samplingTreeSlice" tree="@Tree" dimension="2" value="1" stop="oldestsample" includeLast="true"/>
 <function spec="Slice" id="samplingProportionSlice" arg="@samplingProportion" index="1" count="1"/>
 <parameter id="reverseTimeArrays" spec="beast.core.parameter.BooleanParameter" value="true false true false false"/>
 

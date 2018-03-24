@@ -1,164 +1,164 @@
 package beast.core.util;
 
 import beast.core.*;
+import beast.core.parameter.Parameter;
 import beast.core.parameter.RealParameter;
 import beast.evolution.tree.Node;
-import beast.evolution.tree.TraitSet;
 import beast.evolution.tree.Tree;
 import beast.util.HeapSort;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.IllegalFormatCodePointException;
 import java.util.List;
+
 
 /**
  *
- * Always return times from present to the past (this should be relaxed in future, but then the origin should be passed to it)
+ * Base TreeSlicer class
  *
- * MRCA - present
- * Oldest sample - present
- *
- * Specific dates
- *
- * Branching events (TODO)
- * Sampling events (TODO)
- * Branching and sampling events (TODO)
- * If nr intervals are provided adds an equal number of events into each interval (TODO - almost done, not tested)
- *
- * includeFirst means that the first interval (eg. from root to MRCA is merged with the next).
- *
- * stopAtInput
- * breakAtInput
- * includeLast
- *
- * values input needs to be specified (because of inheritance), but does nothing. (TODO can we make this more elegant?)
+ * Slices tree between stopInput and the present into dimension equidistant intervals
  *
  *
+ * Output either in height (from most recent tip) or in dates
  *
- * Created by dlouis on 04/04/16.
+ * The treeslice is anchored from the newest date in the tree, thus if the tipdates are sampled this should not be used
+ *
+ *
+ * Input dates always have dimension one less than the treeslicer itself (unless the last date is equal to the most recent tip).
+ * (Since the last value in the slice has to be 0 (i.e. the most recent tip in the tree).
+ *
+ * Add flag to limit the biggest interval time to tmrca?
+ *
  */
 public class TreeSlicer extends RealParameter {
 
     final static int MRCA          = 0,
                      LASTSAMPLE    = 1,
                      EQUIDISTANT   = 2,
-                     DATES         = 3,
-                     HEIGHTS       = 4;
-
+                     DATES         = 3;
 
     final double eps = 1e-6;
 
     public Input<Tree> treeInput =
-        new Input<>("tree", "Tree over which to calculate the slice", Input.Validate.REQUIRED);
+            new Input<>("tree", "Tree over which to calculate the slice", Input.Validate.REQUIRED);
 
     public Input<String> stopInput =
-        new Input<>("stop", "Breakpoint to stop the slicing intervals (tmrca/oldestsample/present)", "tmrca");
+            new Input<>("stop", "Breakpoint to stop the slicing intervals (tmrca/oldestsample)", "tmrca");
 
-    public Input<String> typeInput =
-            new Input<>("type", "Type of slice (equidistant/dates/heights)", "equidistant");
-
-    // Need to add includeStart
     public Input<Boolean> includeLastInput =
             new Input<>("includeLast", "Include the last breakpoint (stopping criterion) into the vector", true);
 
+    public Input<String> typeInput =
+            new Input<>("type", "Type of slice (equidistant/dates)", "equidistant");
+
+    public Input<Function> datesInput =
+            new Input<>("dates", "Dates at which to slice the tree");
 
     protected Tree tree;
-    protected int stop, type, start;        // Where to stop and start the slice
+    protected int stop, type;
     protected boolean includeLast;
-    protected Double [] dates;
-
     protected double tmrca,                 // Height of TMRCA of the tree
                      oldest,                // Height of the oldest sample
                      newest,                // Height of the most recent sample
                      anchordate;            // Date for translating height to calendar date (most recent sample at time = 0)
+    protected double [] dates;              // Dates of the slice
+
 
     private boolean timesKnown;
 
+    //Function outputDates;
+
+    // Override input rule of RealParameter (base class)
+    public TreeSlicer() {
+        valuesInput.setRule(Input.Validate.OPTIONAL);
+    }
 
     @Override
     public void initAndValidate() {
+
         int dimension;
         String stopStr, typeStr;
 
+        /* Read tree */
+        tree      = treeInput.get();
+        updateAnchorTimes(tree);
 
-        /* Read tree and anchor date */
-        tree = treeInput.get();
-
+        // Not necessary
+        /* Set anchordate to date of the newest node in the tree
         double minheight = tree.getRoot().getHeight();
         for (Node N : tree.getNodesAsArray()) {
             if (N.getHeight() <= minheight) {
                 anchordate = N.getDate();
                 minheight  = N.getHeight();
             }
-        }
+        }*/
 
-
-        /* Read inputs */
-        if (stopInput.get() != null)
-            stopStr = stopInput.get().toLowerCase().trim();
-        else
-            stopStr = "tmrca";
-
-        if (typeInput.get() != null)
-            typeStr = typeInput.get().toLowerCase().trim();
-        else
-            typeStr = "equidistant";
-
-
-        /* Initialize values and set type */
-        Double[] valuesRaw = valuesInput.get().toArray(new Double[0]);
+        typeStr = typeInput.get().toLowerCase().trim();
 
         if (typeStr.equals("dates")) {
+
+            /* Read input dates */
+
             type = DATES;
 
-            dates = new Double [valuesRaw.length];
-            for (int i = 0; i < valuesRaw.length; i++)
-                dates[i] = valuesRaw[i];
-            HeapSort.sort(dates);
-
+            updateDates();
             if (dates[dates.length-1] == anchordate) {
                 dimension = dates.length;
             } else
                 dimension = dates.length+1;
 
+            // this.setDimension();
+
             dimensionInput.setValue(dimension, this);
+
         } else
         if (typeStr.equals("equidistant")) {
-            type = EQUIDISTANT;
-            dimension = dimensionInput.get();
-        } else
-            throw new IllegalArgumentException("Unknown treeslice type");
 
+            /* Read stop criterion */
+
+            type = EQUIDISTANT;
+
+            dimension = dimensionInput.get();
+
+            if (stopInput.get() != null)
+                stopStr = stopInput.get().toLowerCase().trim();
+            else
+                stopStr = "tmrca";
+
+
+            /* Set stop criterion */
+            if (stopStr.equals("tmrca")) {
+                stop = MRCA;
+            } else if (stopStr.equals("oldestsample")) {
+                stop = LASTSAMPLE;
+            } else
+                throw new IllegalArgumentException("Error in "+this.getID()+": Unknown stop criterion!");
+
+            /* Merge last two intervals? */
+            if (includeLastInput.get() != null)
+                includeLast = includeLastInput.get();
+
+
+        } else
+            throw new IllegalArgumentException("Error in "+this.getID()+": Unknown type of treeslice!");
+
+        /* Initialise values */
         values = new Double[dimension];
         storedValues = new Double[dimension];
 
-
-
-        /* Set stop criterion */
-        if (stopStr.equals("tmrca")) {
-            stop = MRCA;
-        } else
-        if (stopStr.equals("oldestsample")) {
-            stop = LASTSAMPLE;
-        } else
-            throw new IllegalArgumentException("Unknown stop criterion!");
-
-
-        if (includeLastInput.get() != null)
-            includeLast = includeLastInput.get();
-
-
         calculateTimes(tree);
 
+        System.out.println(this.ID+"\t"+this.getDimension());
+
         // Initialization accounting (not really used)
-        m_fLower = Double.NEGATIVE_INFINITY;
+        // Don't want to use super.initAndValidate() because we're doing something else with the values
+        // m_fLower = Double.NEGATIVE_INFINITY;
+        m_fLower = 0.0; // Height cannot be negative
         m_fUpper = Double.POSITIVE_INFINITY;
         m_bIsDirty = new boolean[dimensionInput.get()];
         minorDimension = minorDimensionInput.get();
         if (minorDimension > 0 && dimensionInput.get() % minorDimension > 0) {
-            throw new IllegalArgumentException("Dimension must be divisible by stride");
+            throw new IllegalArgumentException("Error in "+this.getID()+": Dimension must be divisible by stride");
         }
         this.storedValues = values.clone();
 
@@ -193,6 +193,7 @@ public class TreeSlicer extends RealParameter {
 
         tmrca = tree.getRoot().getHeight();
 
+        /* This next part is only necessary when tipdate sampling is being done - How to check? */
         oldest = 0;
         newest = tmrca;
         for (Node N : tree.getNodesAsArray()) {
@@ -205,29 +206,34 @@ public class TreeSlicer extends RealParameter {
 
                 if (height  < newest) {
                     newest  = height;
+                    anchordate = N.getDate();
                 }
             }
         }
+
+    }
+
+    protected void updateDates() {
+        dates = datesInput.get().getDoubleValues();
+        HeapSort.sort(dates);
     }
 
 
-    // Anchor time does not need to be recalculated if tip-dating is used since the tree is anchored based on
-    // the sampling times in the TraitSet (at startup). If tip-dating is used nodes may have negative tip-dates, but the
-    // translation between height and date does not change.
-    //
-    // Sampling times need to be recalculated always, since if tip-dating is used the time of the oldest sample can change
     protected void calculateTimes(Tree tree) {
+
         double endtime, step;
 
+        /* Update newest, oldest, tmrca */
         updateAnchorTimes(tree);
         //System.out.println(tmrca+"\t"+oldest+"\t"+heightToDate(oldest)+"\t"+newest+"\t"+anchordate);
 
         if (type == DATES) {
 
-            for (int i = 1; i < getDimension(); i++)
-               values[values.length-i] = dateToHeight(dates[i-1]);
-            values[0] = 0.0;
+            updateDates();
 
+            for (int i = 1; i < getDimension(); i++)
+                values[values.length - i] = Math.max(0.0, dateToHeight(dates[i - 1]));
+            values[0] = 0.0;
 
         } else {
 
@@ -252,40 +258,20 @@ public class TreeSlicer extends RealParameter {
         }
 
 
-
-            //System.out.println("MRCA: "+mrca+"\tStepsize: "+step);
-
-//        TraitSet dates = tree.getDateTrait();
-//        String[] treetaxa = tree.getTaxaNames();
-//
-//        for (Node n : tree.getNodesAsArray())
-//            if (n.isLeaf())
-//                System.out.println(n.getNr()+"\t"+n.getHeight()+'\t'+
-//                        treetaxa[n.getNr()]+'\t'+dates.getValue(treetaxa[n.getNr()]));
-/*
-
-        for (double value : values)
-            System.out.print(heightToDate(value)+"\t");
-        System.out.println();
-
-        for (double value : values)
-            System.out.print(value+"\t");
-        System.out.println();
-        System.out.println(this.getDimension());
-*/
-
         timesKnown = true;
     }
 
-
+    @Override
     protected boolean requiresRecalculation() {
+        // Tree is a stateNode so should always use somethingIsDirty() and NOT isDirtyCalculation!
+        //System.out.println("Checking recalculation "+this.ID+" "+tree.isDirtyCalculation()+" "+tree.somethingIsDirty());
         timesKnown = false;
         return true;
-        //return tree.isDirtyCalculation();
+        //return tree.somethingIsDirty();
     }
 
 
-    // Override methods to make sure times get recalculated!
+    // Override methods to make sure times get recalculated
 
     @Override
     public Double getValue() {
@@ -326,6 +312,9 @@ public class TreeSlicer extends RealParameter {
         }
         return Arrays.copyOf(values, values.length);
     }
+
+
+
 
 
 }
